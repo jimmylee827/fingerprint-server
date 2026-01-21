@@ -26,3 +26,7 @@ replay_pid*
 
 outputs/
 startup_log.txt
+
+data/
+.env
+!.env.example

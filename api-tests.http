@@ -1,0 +1,273 @@
+### Fingerprint REST API - Test File
+### Use VS Code REST Client extension to run these requests
+### https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+
+@baseUrl = http://localhost:8080
+
+###############################################################################
+# CONFIGURATION - API Key from .env file
+###############################################################################
+# The REST Client extension will load INTERNAL_KEY from .env file
+@apiKey = {{$dotenv INTERNAL_KEY}}
+
+###############################################################################
+# STATUS
+###############################################################################
+
+### Get server status
+# @name status
+GET {{baseUrl}}/api/status
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+###############################################################################
+# REGISTRATION
+###############################################################################
+
+### Register a new fingerprint (Admin)
+# This will block for up to 30 seconds waiting for 3 fingerprint captures
+# Place your finger on the scanner 3 times when prompted
+# @name registerAdmin
+POST {{baseUrl}}/api/register
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+{
+    "name": "John Doe",
+    "role": "Admin"
+}
+
+### Register a new fingerprint (User)
+# @name registerUser
+POST {{baseUrl}}/api/register
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+{
+    "name": "Jane Smith",
+    "role": "User"
+}
+
+### Register with custom timeout (60 seconds)
+# @name registerWithTimeout
+POST {{baseUrl}}/api/register
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+{
+    "name": "Test User",
+    "role": "User",
+    "timeout": 60
+}
+
+###############################################################################
+# LIST / GET FINGERPRINTS
+###############################################################################
+
+### List all registered fingerprints
+# @name listAll
+GET {{baseUrl}}/api/fingerprints
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+### Get a specific fingerprint by ID
+# Replace {id} with actual ID from registration or list response
+# @name getById
+GET {{baseUrl}}/api/fingerprints/{{registerAdmin.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+###############################################################################
+# EXPORT / IMPORT
+###############################################################################
+
+### Export a fingerprint
+# Returns full export protocol with template data for backup/transfer
+# @name export
+GET {{baseUrl}}/api/fingerprints/{{registerAdmin.response.body.id}}/export
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+### Import a fingerprint
+# Use the export response from above, or create your own following this format
+# @name import
+POST {{baseUrl}}/api/fingerprints/import
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+{
+    "version": "1.0",
+    "exportedAt": "2026-01-22T10:00:00Z",
+    "fingerprint": {
+        "name": "Imported User",
+        "role": "User",
+        "templateBase64": "PASTE_TEMPLATE_BASE64_HERE",
+        "originalCreatedAt": "2026-01-22T09:00:00Z"
+    }
+}
+
+###############################################################################
+# DELETE
+###############################################################################
+
+### Delete a fingerprint
+# @name delete
+DELETE {{baseUrl}}/api/fingerprints/{{registerUser.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+###############################################################################
+# CONFIGURATION
+###############################################################################
+
+### Get current configuration
+# @name getConfig
+GET {{baseUrl}}/api/config
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+### Update configuration (serverPort only)
+# Note: webhookUrl is now configured in .env file
+# @name updateConfig
+PUT {{baseUrl}}/api/config
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+{
+    "serverPort": 8080
+}
+
+### Get webhook URL (read-only, from .env)
+# @name getWebhook
+GET {{baseUrl}}/api/config/webhook
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+### Test webhook connectivity
+# Sends a test POST to {WEBHOOK_URL}/fingerprint-detected
+# @name testWebhook
+POST {{baseUrl}}/api/config/webhook/test
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+###############################################################################
+# IDENTIFICATION CONTROL
+###############################################################################
+
+### Start background identification
+# When running, any registered fingerprint scanned will trigger a webhook
+# @name startIdentification
+POST {{baseUrl}}/api/identification/start
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+### Stop background identification
+# @name stopIdentification
+POST {{baseUrl}}/api/identification/stop
+Content-Type: application/json
+Authorization: Bearer {{apiKey}}
+
+###############################################################################
+# WEBHOOK PAYLOAD EXAMPLE
+###############################################################################
+# When a registered fingerprint is detected, the server sends a POST to
+# the configured webhook URL with:
+# When a registered fingerprint is detected, the server sends a POST to
+# {WEBHOOK_URL}/fingerprint-detected with:
+#
+# Headers:
+#   Authorization: Bearer {WEBHOOK_EXTERNAL_KEY from .env}
+#   Content-Type: application/json
+#
+# Body:
+# {
+#     "event": "fingerprint_detected",
+#     "userId": "abc123-uuid",
+#     "name": "John Doe",
+#     "role": "Admin",
+#     "timestamp": "2026-01-22T10:30:00Z",
+#     "score": 85
+# }
+#
+# When an unidentified fingerprint is detected, the server sends a POST to
+# {WEBHOOK_URL}/fingerprint-unidentified with:
+#
+# Body:
+# {
+#     "event": "fingerprint_unidentified",
+#     "userId": null,
+#     "name": null,
+#     "role": null,
+#     "timestamp": "2026-01-22T10:31:00Z",
+#     "score": 0
+# }
+#
+###############################################################################
+
+###############################################################################
+# DATA STRUCTURE
+###############################################################################
+# After registration, data is stored as:
+#
+# config.json                    # Server config (serverPort only)
+# .env                           # API keys + webhook URL
+# .env.example                   # Template for .env
+# data/
+# ├── fingerprints.json          # All registrations (master list)
+# └── fingerprints/
+#     └── {uuid}/
+#         ├── user_detail.json   # User info + template
+#         ├── capture_1.bmp      # First capture image
+#         ├── capture_2.bmp      # Second capture image
+#         └── capture_3.bmp      # Third capture image
+#
+# user_detail.json example:
+# {
+#     "id": "5497b689-a712-4204-beb6-7dd901e48570",
+#     "name": "John Doe",
+#     "role": "Admin",
+#     "templateBase64": "SgdTUzIxAAADREcE...",
+#     "createdAt": "2026-01-21T16:49:21.407007400Z"
+# }
+#
+###############################################################################
+
+###############################################################################
+# EXPORT PROTOCOL SPECIFICATION
+###############################################################################
+# Version 1.0 Export Format:
+#
+# {
+#     "version": "1.0",
+#     "exportedAt": "ISO-8601 timestamp",
+#     "fingerprint": {
+#         "name": "User's name",
+#         "role": "Admin|User",
+#         "templateBase64": "Base64-encoded fingerprint template",
+#         "originalCreatedAt": "ISO-8601 timestamp of original registration"
+#     }
+# }
+#
+###############################################################################
+
+###############################################################################
+# ERROR RESPONSES
+###############################################################################
+# 
+# 400 Bad Request:
+# { "error": "Description of validation error" }
+#
+# 404 Not Found:
+# { "error": "Fingerprint not found" }
+#
+# 409 Conflict (Duplicate fingerprint):
+# {
+#     "error": "Fingerprint already registered",
+#     "existingUserId": "abc123-uuid",
+#     "existingUserName": "John Doe"
+# }
+#
+# 500 Internal Server Error:
+# { "error": "Internal server error: description" }
+#
+###############################################################################
