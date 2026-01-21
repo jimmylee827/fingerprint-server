@@ -24,15 +24,38 @@
 hs_err_pid*
 replay_pid*
 
+# Application data (contains biometric data)
 outputs/
-log_startup.txt
-
 data/
 
-# Transfer files (but keep the readme)
+# Logs
+log_startup.txt
+log_api_*.log
+log_scan_*.log
+
+# Transfer files (contain sensitive fingerprint data)
 transfer/*.json
 !transfer/transfer_readme.md
+fp_transfer_*.json
+
+# Environment (contains API keys)
 .env
 !.env.example
 
-fp_transfer_*.json
+# IDE / Editor
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build artifacts
+bin/
+out/
+target/
