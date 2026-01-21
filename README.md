@@ -48,7 +48,7 @@ A powerful, production-ready **biometric fingerprint authentication server** bui
 
 ### 1. Install ZKTeco Drivers
 
-Run `setup.exe` to install the fingerprint reader drivers, or install them manually from ZKTeco's website.
+Run `ZKTeco_driver_setup.exe` (included in the project) to install the fingerprint reader drivers.
 
 ### 2. Configure Environment
 
@@ -92,10 +92,10 @@ Edit `config.json` in the project root:
 
 ### 4. Start the Server
 
-Double-click `start.bat` or run from command line:
+Double-click `RUN_start.bat` or run from command line:
 
 ```batch
-start.bat
+RUN_start.bat
 ```
 
 You should see:
@@ -112,7 +112,7 @@ You should see:
 
 **Option A: Use the Registration Script**
 ```batch
-register.bat
+RUN_register.bat
 ```
 
 **Option B: Use the API directly**
@@ -122,6 +122,43 @@ curl -X POST http://localhost:8080/api/register \
   -H "Authorization: Bearer your-api-key" \
   -d '{"name": "John Doe", "role": "Admin"}'
 ```
+
+---
+
+## 📦 Export & Import Fingerprints
+
+### Exporting a Fingerprint
+
+Use `RUN_export.bat` to export a fingerprint to the `transfer` folder:
+
+```batch
+RUN_export.bat
+```
+
+The script will:
+1. List all registered fingerprints with their IDs
+2. Prompt you to enter the ID to export
+3. Save to `transfer/fp_transfer_YYYYMMDD_HHmmss_fff.json`
+
+### Importing a Fingerprint
+
+Use `RUN_import.bat` to import from the `transfer` folder:
+
+```batch
+RUN_import.bat
+```
+
+The script will:
+1. List all available transfer files with index numbers
+2. Show name and role for each file
+3. Prompt you to select a file by number (1, 2, 3...)
+4. Import the selected fingerprint
+
+### Transfer Between Servers
+
+1. Run `RUN_export.bat` on the source server
+2. Copy the JSON file from `transfer/` to the target server's `transfer/` folder
+3. Run `RUN_import.bat` on the target server and select the file
 
 ---
 
@@ -226,9 +263,15 @@ fingerprint-server/
 ├── 📄 config.json              # Server configuration (port only)
 ├── 📄 .env                     # API keys & webhook URL (DO NOT COMMIT!)
 ├── 📄 .env.example             # Template for .env file
-├── 📄 start.bat                # Start the server
-├── 📄 register.bat             # Quick registration script
+├── 📄 RUN_start.bat            # Start the server
+├── 📄 RUN_register.bat         # Quick registration script
+├── 📄 RUN_export.bat           # Export fingerprint to transfer file
+├── 📄 RUN_import.bat           # Import fingerprint from transfer file
 ├── 📄 api-tests.http           # VS Code REST Client tests
+│
+├── 📁 transfer/
+│   ├── 📄 transfer_readme.md   # Transfer folder documentation
+│   └── 📄 fp_transfer_*.json   # Exported fingerprint files
 │
 ├── 📁 data/
 │   ├── 📄 fingerprints.json    # Master registration list
@@ -283,7 +326,7 @@ Tracks fingerprint scans and webhook activity:
 
 ### Fingerprint reader not detected
 
-1. Run `setup.exe` to install drivers
+1. Run `ZKTeco_driver_setup.exe` to install drivers
 2. Reconnect the USB device
 3. Check Device Manager for ZKTeco device
 

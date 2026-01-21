@@ -13,7 +13,7 @@ set "JAVA_CMD="
 set "JAVA_OK=0"
 set "DRIVER_OK=0"
 set "COMPILE_OK=0"
-set "LOG_FILE=startup_log.txt"
+set "LOG_FILE=log_startup.txt"
 
 :: Get script directory
 set "SCRIPT_DIR=%~dp0"

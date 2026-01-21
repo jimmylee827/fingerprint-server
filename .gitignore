@@ -25,8 +25,14 @@ hs_err_pid*
 replay_pid*
 
 outputs/
-startup_log.txt
+log_startup.txt
 
 data/
+
+# Transfer files (but keep the readme)
+transfer/*.json
+!transfer/transfer_readme.md
 .env
 !.env.example
+
+fp_transfer_*.json

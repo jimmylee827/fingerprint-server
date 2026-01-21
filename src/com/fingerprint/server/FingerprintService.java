@@ -483,7 +483,7 @@ public class FingerprintService {
             return EnrollmentResult.failure("Fingerprint service not initialized");
         }
 
-        // Check for duplicate
+        // Check for duplicate fingerprint (biometric match)
         IdentifyResult dupCheck = checkDuplicate(templateBase64);
         if (dupCheck.matched) {
             return EnrollmentResult.duplicate(
@@ -491,6 +491,19 @@ public class FingerprintService {
                 dupCheck.registration.getId(),
                 dupCheck.registration.getName()
             );
+        }
+
+        // Check for duplicate name (case-insensitive)
+        if (storageService.isNameExists(name)) {
+            Optional<Registration> existing = storageService.getRegistrationByName(name);
+            if (existing.isPresent()) {
+                return EnrollmentResult.duplicate(
+                    "Name already exists",
+                    existing.get().getId(),
+                    existing.get().getName()
+                );
+            }
+            return EnrollmentResult.failure("Name already exists");
         }
 
         // Decode template
@@ -504,6 +517,10 @@ public class FingerprintService {
         Registration registration = storageService.addRegistrationWithId(
             newId, name, role, templateBase64, null // Use current time, not original
         );
+
+        if (registration == null) {
+            return EnrollmentResult.failure("Failed to save registration");
+        }
 
         // Add to in-memory DB
         int fid = nextFingerprintId++;

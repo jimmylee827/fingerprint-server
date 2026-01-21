@@ -40,7 +40,7 @@ echo Checking if server is running...
 powershell -NoProfile -Command "try { $response = Invoke-WebRequest -Uri 'http://localhost:%PORT%/api/status' -Method GET -Headers @{'Authorization'='Bearer %API_KEY%'} -TimeoutSec 3 -UseBasicParsing; Write-Host '[OK] Server is running'; exit 0 } catch { Write-Host '[ERROR] Server is not running or not responding'; exit 1 }"
 if %ERRORLEVEL% neq 0 (
     echo.
-    echo Please start the server first using start.bat
+    echo Please start the server first using RUN_start.bat
     goto :cleanup
 )
 
@@ -85,6 +85,6 @@ echo Please place your finger on the scanner when prompted.
 echo.
 
 :: Make API request to register using external PowerShell script
-powershell -NoProfile -ExecutionPolicy Bypass -File "register-api.ps1" -Port "%PORT%" -ApiKey "%API_KEY%" -Name "%NAME%" -Role "%ROLE%"
+powershell -NoProfile -ExecutionPolicy Bypass -File "ps_register-api.ps1" -Port "%PORT%" -ApiKey "%API_KEY%" -Name "%NAME%" -Role "%ROLE%"
 
 goto :cleanup
