@@ -25,9 +25,9 @@ public class WebhookService {
     }
 
     /**
-     * Get the webhook base URL from environment
+     * Get the webhook URL from environment (complete endpoint URL)
      */
-    private String getWebhookBaseUrl() {
+    private String getWebhookUrl() {
         return EnvLoader.get("WEBHOOK_URL", "");
     }
 
@@ -42,38 +42,35 @@ public class WebhookService {
      * Send webhook notification asynchronously when a fingerprint is detected
      */
     public void notifyFingerprintDetected(Registration registration, int matchScore) {
-        String baseUrl = getWebhookBaseUrl();
+        String webhookUrl = getWebhookUrl();
         
-        if (baseUrl == null || baseUrl.isEmpty()) {
+        if (webhookUrl == null || webhookUrl.isEmpty()) {
             System.out.println("[WebhookService] No webhook URL configured, skipping notification");
             return;
         }
 
-        // Build full URL for identified fingerprints
-        String webhookUrl = baseUrl.endsWith("/") 
-            ? baseUrl + "fingerprint-detected" 
-            : baseUrl + "/fingerprint-detected";
-
-        // Build payload
-        WebhookPayload payload = new WebhookPayload();
-        payload.event = "fingerprint_detected";
-        payload.userId = registration.getId();
-        payload.name = registration.getName();
-        payload.role = registration.getRole();
-        payload.timestamp = Instant.now().toString();
-        payload.score = matchScore;
+        // Build payload with detecttype wrapper
+        WebhookPayloadWrapper wrapper = new WebhookPayloadWrapper();
+        wrapper.detecttype = "VALID";
+        wrapper.data = new WebhookPayload();
+        wrapper.data.event = "fingerprint_detected";
+        wrapper.data.userId = registration.getId();
+        wrapper.data.name = registration.getName();
+        wrapper.data.role = registration.getRole();
+        wrapper.data.timestamp = Instant.now().toString();
+        wrapper.data.score = matchScore;
 
         // Send asynchronously
-        executor.submit(() -> sendWebhook(webhookUrl, payload));
+        executor.submit(() -> sendWebhook(webhookUrl, wrapper));
     }
 
     /**
      * Send webhook synchronously (for internal use)
      */
-    private void sendWebhook(String webhookUrl, WebhookPayload payload) {
+    private void sendWebhook(String webhookUrl, WebhookPayloadWrapper wrapper) {
         try {
             System.out.println("[WebhookService] Sending webhook to: " + webhookUrl);
-            System.out.println("[WebhookService] Payload: " + gson.toJson(payload));
+            System.out.println("[WebhookService] Payload: " + gson.toJson(wrapper));
 
             URL url = new URL(webhookUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -92,7 +89,7 @@ public class WebhookService {
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
 
-            String jsonPayload = gson.toJson(payload);
+            String jsonPayload = gson.toJson(wrapper);
             byte[] payloadBytes = jsonPayload.getBytes(StandardCharsets.UTF_8);
 
             try (OutputStream os = conn.getOutputStream()) {
@@ -124,89 +121,26 @@ public class WebhookService {
      * Send webhook notification asynchronously when an unidentified fingerprint is detected
      */
     public void notifyFingerprintUnidentified() {
-        String baseUrl = getWebhookBaseUrl();
+        String webhookUrl = getWebhookUrl();
         
-        if (baseUrl == null || baseUrl.isEmpty()) {
+        if (webhookUrl == null || webhookUrl.isEmpty()) {
             System.out.println("[WebhookService] No webhook URL configured, skipping unidentified notification");
             return;
         }
 
-        // Build full URL for unidentified fingerprints
-        String webhookUrl = baseUrl.endsWith("/") 
-            ? baseUrl + "fingerprint-unidentified" 
-            : baseUrl + "/fingerprint-unidentified";
-
-        // Build payload
-        WebhookPayload payload = new WebhookPayload();
-        payload.event = "fingerprint_unidentified";
-        payload.userId = null;
-        payload.name = null;
-        payload.role = null;
-        payload.timestamp = Instant.now().toString();
-        payload.score = 0;
+        // Build payload with detecttype wrapper
+        WebhookPayloadWrapper wrapper = new WebhookPayloadWrapper();
+        wrapper.detecttype = "UNIDENTIFIED";
+        wrapper.data = new WebhookPayload();
+        wrapper.data.event = "fingerprint_unidentified";
+        wrapper.data.userId = null;
+        wrapper.data.name = null;
+        wrapper.data.role = null;
+        wrapper.data.timestamp = Instant.now().toString();
+        wrapper.data.score = 0;
 
         // Send asynchronously
-        executor.submit(() -> sendWebhook(webhookUrl, payload));
-    }
-
-    /**
-     * Test webhook connectivity
-     */
-    public WebhookTestResult testWebhook() {
-        String baseUrl = getWebhookBaseUrl();
-        
-        if (baseUrl == null || baseUrl.isEmpty()) {
-            return new WebhookTestResult(false, "No webhook URL configured (WEBHOOK_URL in .env)");
-        }
-
-        // Test the fingerprint-detected endpoint
-        String webhookUrl = baseUrl.endsWith("/") 
-            ? baseUrl + "fingerprint-detected" 
-            : baseUrl + "/fingerprint-detected";
-
-        try {
-            URL url = new URL(webhookUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            
-            // Add Bearer token if configured
-            String externalKey = getWebhookExternalKey();
-            if (externalKey != null && !externalKey.isEmpty() && !externalKey.equals("your-webhook-bearer-token-here")) {
-                conn.setRequestProperty("Authorization", "Bearer " + externalKey);
-            }
-            
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-
-            // Send test payload
-            WebhookPayload testPayload = new WebhookPayload();
-            testPayload.event = "webhook_test";
-            testPayload.userId = "test";
-            testPayload.name = "Test User";
-            testPayload.role = "Test";
-            testPayload.timestamp = Instant.now().toString();
-            testPayload.score = 0;
-
-            String jsonPayload = gson.toJson(testPayload);
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
-                os.flush();
-            }
-
-            int responseCode = conn.getResponseCode();
-            conn.disconnect();
-
-            if (responseCode >= 200 && responseCode < 300) {
-                return new WebhookTestResult(true, "Webhook test successful, response code: " + responseCode);
-            } else {
-                return new WebhookTestResult(false, "Webhook returned error code: " + responseCode);
-            }
-
-        } catch (Exception e) {
-            return new WebhookTestResult(false, "Failed to connect: " + e.getMessage());
-        }
+        executor.submit(() -> sendWebhook(webhookUrl, wrapper));
     }
 
     /**
@@ -218,6 +152,11 @@ public class WebhookService {
 
     // ==================== Payload Classes ====================
 
+    public static class WebhookPayloadWrapper {
+        public String detecttype;
+        public WebhookPayload data;
+    }
+
     public static class WebhookPayload {
         public String event;
         public String userId;
@@ -225,15 +164,5 @@ public class WebhookService {
         public String role;
         public String timestamp;
         public int score;
-    }
-
-    public static class WebhookTestResult {
-        public boolean success;
-        public String message;
-
-        public WebhookTestResult(boolean success, String message) {
-            this.success = success;
-            this.message = message;
-        }
     }
 }

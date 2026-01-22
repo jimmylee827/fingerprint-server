@@ -143,13 +143,6 @@ GET {{baseUrl}}/api/config/webhook
 Content-Type: application/json
 Authorization: Bearer {{apiKey}}
 
-### Test webhook connectivity
-# Sends a test POST to {WEBHOOK_URL}/fingerprint-detected
-# @name testWebhook
-POST {{baseUrl}}/api/config/webhook/test
-Content-Type: application/json
-Authorization: Bearer {{apiKey}}
-
 ###############################################################################
 # IDENTIFICATION CONTROL
 ###############################################################################
@@ -170,36 +163,37 @@ Authorization: Bearer {{apiKey}}
 ###############################################################################
 # WEBHOOK PAYLOAD EXAMPLE
 ###############################################################################
-# When a registered fingerprint is detected, the server sends a POST to
-# the configured webhook URL with:
-# When a registered fingerprint is detected, the server sends a POST to
-# {WEBHOOK_URL}/fingerprint-detected with:
+# When fingerprints are detected, the server sends a POST to
+# the configured WEBHOOK_URL with:
 #
 # Headers:
 #   Authorization: Bearer {WEBHOOK_EXTERNAL_KEY from .env}
 #   Content-Type: application/json
 #
-# Body:
+# Valid Fingerprint Body:
 # {
-#     "event": "fingerprint_detected",
-#     "userId": "abc123-uuid",
-#     "name": "John Doe",
-#     "role": "Admin",
-#     "timestamp": "2026-01-22T10:30:00Z",
-#     "score": 85
+#     "detecttype": "VALID",
+#     "data": {
+#         "event": "fingerprint_detected",
+#         "userId": "abc123-uuid",
+#         "name": "John Doe",
+#         "role": "Admin",
+#         "timestamp": "2026-01-22T10:30:00Z",
+#         "score": 85
+#     }
 # }
 #
-# When an unidentified fingerprint is detected, the server sends a POST to
-# {WEBHOOK_URL}/fingerprint-unidentified with:
-#
-# Body:
+# Unidentified Fingerprint Body:
 # {
-#     "event": "fingerprint_unidentified",
-#     "userId": null,
-#     "name": null,
-#     "role": null,
-#     "timestamp": "2026-01-22T10:31:00Z",
-#     "score": 0
+#     "detecttype": "UNIDENTIFIED",
+#     "data": {
+#         "event": "fingerprint_unidentified",
+#         "userId": null,
+#         "name": null,
+#         "role": null,
+#         "timestamp": "2026-01-22T10:31:00Z",
+#         "score": 0
+#     }
 # }
 #
 ###############################################################################

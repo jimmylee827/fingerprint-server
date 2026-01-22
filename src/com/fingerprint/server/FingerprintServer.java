@@ -323,19 +323,6 @@ public class FingerprintServer {
             return gson.toJson(response);
         });
 
-        // Test webhook
-        post("/api/config/webhook/test", (req, res) -> {
-            WebhookService.WebhookTestResult result = webhookService.testWebhook();
-            JsonObject response = new JsonObject();
-            response.addProperty("success", result.success);
-            response.addProperty("message", result.message);
-            
-            if (!result.success) {
-                res.status(500);
-            }
-            return gson.toJson(response);
-        });
-
         // Start identification
         post("/api/identification/start", (req, res) -> {
             fingerprintService.startIdentification();
@@ -401,7 +388,6 @@ public class FingerprintServer {
         System.out.println("    GET    /api/config              - Get config");
         System.out.println("    PUT    /api/config              - Update config");
         System.out.println("    PUT    /api/config/webhook      - Update webhook URL");
-        System.out.println("    POST   /api/config/webhook/test - Test webhook");
         System.out.println("    POST   /api/identification/start - Start identification");
         System.out.println("    POST   /api/identification/stop  - Stop identification");
         System.out.println("============================================================");

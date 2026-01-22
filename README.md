@@ -60,11 +60,12 @@ Create or edit `.env` file in the project root:
 # Internal API Key (required for all API requests)
 INTERNAL_KEY=your-secure-api-key-here
 
-# Webhook Base URL (without endpoint path)
-# Events will be sent to:
-#   {WEBHOOK_URL}/fingerprint-detected     - when a registered fingerprint is scanned
-#   {WEBHOOK_URL}/fingerprint-unidentified - when an unknown fingerprint is scanned
-WEBHOOK_URL=https://your-server.com
+# Webhook Endpoint URL (complete URL to your webhook endpoint)
+# Examples:
+#   WEBHOOK_URL=http://example.com/webhook
+#   WEBHOOK_URL=http://example.com:5678/api/fingerprint
+# All fingerprint events (valid and unidentified) are sent to this single endpoint
+WEBHOOK_URL=https://your-server.com/webhook
 
 # External Webhook Bearer Token (sent to webhook endpoint)
 WEBHOOK_EXTERNAL_KEY=your-webhook-bearer-token-here
@@ -186,7 +187,6 @@ Authorization: Bearer {INTERNAL_KEY}
 | `GET` | `/api/config` | Get server configuration |
 | `PUT` | `/api/config` | Update configuration |
 | `PUT` | `/api/config/webhook` | Update webhook URL |
-| `POST` | `/api/config/webhook/test` | Test webhook connectivity |
 | `POST` | `/api/identification/start` | Start background scanning |
 | `POST` | `/api/identification/stop` | Stop background scanning |
 
@@ -220,37 +220,43 @@ Authorization: Bearer {INTERNAL_KEY}
 
 ### Webhook Payload
 
-When a registered fingerprint is detected, the server sends a POST to `{WEBHOOK_URL}/fingerprint-detected`:
+When a fingerprint is detected, the server sends a POST to `{WEBHOOK_URL}`:
 
+**Valid Fingerprint Detected:**
 ```http
-POST {webhookUrl}
+POST {WEBHOOK_URL}
 Authorization: Bearer {WEBHOOK_EXTERNAL_KEY}
 Content-Type: application/json
 
 {
-    "event": "fingerprint_detected",
-    "userId": "5497b689-a712-4204-beb6-7dd901e48570",
-    "name": "John Doe",
-    "role": "Admin",
-    "timestamp": "2026-01-22T10:30:00Z",
-    "score": 85
+    "detecttype": "VALID",
+    "data": {
+        "event": "fingerprint_detected",
+        "userId": "5497b689-a712-4204-beb6-7dd901e48570",
+        "name": "John Doe",
+        "role": "Admin",
+        "timestamp": "2026-01-22T10:30:00Z",
+        "score": 85
+    }
 }
 ```
 
-When an unidentified fingerprint is detected, the server sends a POST to `{WEBHOOK_URL}/fingerprint-unidentified`:
-
+**Unidentified Fingerprint:**
 ```http
-POST {webhookUrl}/fingerprint-unidentified
+POST {WEBHOOK_URL}
 Authorization: Bearer {WEBHOOK_EXTERNAL_KEY}
 Content-Type: application/json
 
 {
-    "event": "fingerprint_unidentified",
-    "userId": null,
-    "name": null,
-    "role": null,
-    "timestamp": "2026-01-22T10:31:00Z",
-    "score": 0
+    "detecttype": "UNIDENTIFIED",
+    "data": {
+        "event": "fingerprint_unidentified",
+        "userId": null,
+        "name": null,
+        "role": null,
+        "timestamp": "2026-01-22T10:31:00Z",
+        "score": 0
+    }
 }
 ```
 
@@ -332,10 +338,10 @@ Tracks fingerprint scans and webhook activity:
 
 ### Webhook not receiving events
 
-1. Check `.env` has correct `WEBHOOK_URL` (base URL only, no path)
-2. Test with `/api/config/webhook/test`
-3. Check `log_scan_*.log` for webhook errors
-4. Ensure your webhook endpoint accepts POST requests at `/fingerprint-detected`
+1. Check `.env` has correct `WEBHOOK_URL` (complete endpoint URL)
+2. Check `log_scan_*.log` for webhook errors
+3. Ensure your webhook endpoint accepts POST requests
+4. Verify `WEBHOOK_EXTERNAL_KEY` matches your webhook's expected Bearer token
 
 ### Registration fails with "Duplicate"
 
